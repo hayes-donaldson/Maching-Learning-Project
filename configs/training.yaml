@@ -1,0 +1,56 @@
+# ALL values are PROVISIONAL examples, not tuned model settings.
+schema_version: 1
+provisional: true
+seed: 4452
+data:
+  features:
+    - aspect_ratio
+    - area_m2
+    - taper_ratio
+    - sweep_deg
+    - airfoil
+    - alpha_deg
+    - velocity_m_s
+    - density_kg_m3
+    - dynamic_viscosity_pa_s
+    - speed_of_sound_m_s
+  targets: [cl, cd]
+  group_column: geometry_id
+  usable_status: converged
+  processed_root: data/processed
+split:
+  train: 0.70
+  validation: 0.15
+  test: 0.15
+  by: geometry_id
+preprocessing:
+  airfoil_encoding: one_hot  # Named-airfoil baseline; shape encoding remains TODO
+  unknown_airfoil: error
+  feature_scaling: standard
+  target_scaling: standard
+  fit_partition: train
+model:
+  hidden_sizes: [128, 128, 64]
+  activation: relu
+  dropout: 0.0
+  output_dim: 2
+training:
+  optimizer: adam
+  learning_rate: 0.001
+  batch_size: 64
+  max_epochs: 200
+  loss: mse
+  early_stopping_patience: 20
+  selection_metric: validation_scaled_mse
+  restore_best_checkpoint: true
+  device: cpu
+  deterministic: true
+study:
+  hidden_sizes: [[64, 64], [128, 128, 64]]
+  learning_rates: [0.001, 0.0003]
+  trial_seeds: [4452, 4453]
+  shared_geometry_splits: true
+output:
+  results_root: results
+  models_root: models
+  overwrite: false

@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "me4452-wing-surrogate"
+version = "0.1.0"
+description = "ME4452 wing aerodynamics solver and neural network surrogate scaffold"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+solver = ["aerosandbox==4.2.10", "neuralfoil==0.3.3", "numpy", "scipy", "PyYAML"]
+surrogate = ["numpy", "pandas", "scikit-learn", "torch", "joblib", "PyYAML"]
+dev = ["pytest>=7"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["solver", "solver.*", "wing_surrogate", "wing_surrogate.*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
