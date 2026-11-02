@@ -2,7 +2,6 @@
 
 from .geometry import WingGeometry, WingParameters, build_wing_geometry
 
-
 __all__ = [
-    "WingGeometry", "WingParameters", "build_wing_geometry", 
+    "WingGeometry", "WingParameters", "build_wing_geometry",
 ]
