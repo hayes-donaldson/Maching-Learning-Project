@@ -11,7 +11,7 @@ data:
     - airfoil
     - alpha_deg
     - velocity
-  targets: [CL, CD_profile]
+  targets: [CL, CD]
   group_column: geometry_id
   usable_status: converged
   processed_root: data/processed

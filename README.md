@@ -40,15 +40,23 @@ using the default atmosphere, rather than supplied as an input. The solver uses
 local chord at each station; the CSV's derived `reynolds` column uses mean
 aerodynamic chord. See [NASA's Reynolds number definition](https://www.grc.nasa.gov/WWW/K-12/airplane/reynolds.html).
 
-The outputs are `CL` and `CD_profile`, with convergence/runtime diagnostics.
+The outputs are `CL` and `CD`, with convergence/runtime diagnostics. `CD` is the
+sum of section profile drag and induced drag recomputed from the final corrected
+circulation using the same near-field vortex-force calculation as AeroSandbox.
+The solver also returns `drag_components` with separate `profile` and `induced`
+values. This is modeled wing drag; it does not include a fuselage or other aircraft
+components. The original uncoupled VLM coefficients are retained for comparison.
 `notebooks/train_surrogate.ipynb` uses all seven inputs, encodes airfoil names
 as numeric indicator columns, and holds out sampled cases for testing.
-Regenerate the CSV before training so it contains the current input columns.
+Regenerate the CSV before training after changing the solver or input schema.
 
 Install solver dependencies with `python -m pip install -e ".[solver]"`; data
 generation also needs pandas and matplotlib. Training dependencies are installed
 with `python -m pip install -e ".[surrogate]"`. Both notebooks can run from the
 project root or the notebooks directory.
 
-The plotting section shows lift versus angle of attack, profile drag versus
-angle of attack, and lift versus profile drag, with points colored by aspect ratio.
+The plotting section reads the saved CSV and compares each of the six numeric
+inputs against lift and total wing drag, with airfoils distinguished by color and
+marker. Separate box plots compare the outputs by airfoil. The charts show
+associations across the DOE, since the other inputs also vary. PNG exports are
+saved in `results/feature_plots`.

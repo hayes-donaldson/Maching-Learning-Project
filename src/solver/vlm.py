@@ -43,6 +43,24 @@ def _influence_matrix(analysis: Any) -> np.ndarray:
     return matrix
 
 
+def _panel_induced_drag(analysis: Any, circulation: np.ndarray) -> np.ndarray:
+    """Recompute panel drag coefficients using AeroSandbox's near-field forces."""
+    analysis.vortex_strengths = circulation.copy()
+    local_velocity = analysis.get_velocity_at_points(analysis.vortex_centers)
+    bound_leg = analysis.right_vortex_vertices - analysis.left_vortex_vertices
+    forces = (
+        float(analysis.op_point.atmosphere.density())
+        * np.cross(local_velocity, bound_leg)
+        * circulation[:, None]
+    )
+    force_x_wind, _, _ = analysis.op_point.convert_axes(
+        forces[:, 0], forces[:, 1], forces[:, 2],
+        from_axes="geometry", to_axes="wind",
+    )
+    reference_force = float(analysis.op_point.dynamic_pressure()) * analysis.airplane.s_ref
+    return -np.asarray(force_x_wind) / reference_force
+
+
 # Lift coupling: find incidence corrections that make VLM and airfoil lift agree.
 def _match_lift(
     *,
@@ -129,14 +147,15 @@ def solve_vlm_neuralfoil(
     xtol: float = 1e-8,
     max_evaluations: int = 2000,
 ) -> dict[str, Any]:
-    """Return approximate wing CL, profile CD, and station data.
+    """Return approximate wing CL, total CD, and station data.
 
     alpha is in degrees; velocity is in m/s. Station corrections are radians.
     Reynolds number is calculated from velocity, local chord, and the
     atmosphere's kinematic viscosity. The returned reference Re uses the MAC.
     Includes both halves of the wing, ordered from negative to positive y.
     Geometric twist is included in the VLM mesh and its initial circulation.
-    No coupled induced drag, total drag, or wing moment is reported here.
+    CD combines section profile drag and near-field induced drag recomputed
+    from the final corrected circulation. It represents this wing only.
     """
 
     # Reject invalid flow conditions and wing shapes outside this model's assumptions.
@@ -249,6 +268,12 @@ def solve_vlm_neuralfoil(
     )
     section_aero = state["section_aero"]
 
+    # Recompute forces with the corrected loading; running VLM again would reset it.
+    panel_drag = _panel_induced_drag(analysis, state["gamma"])
+    induced_cd = np.bincount(strip, weights=panel_drag) * airplane.s_ref / strip_area
+    profile_drag = float(np.sum(section_aero["CD"] * strip_area) / airplane.s_ref)
+    induced_drag = float(np.sum(panel_drag))
+
     # Collect the local flow conditions and airfoil coefficients along the full span.
     stations = [
         {
@@ -262,7 +287,9 @@ def solve_vlm_neuralfoil(
             "correction_rad": float(state["correction_rad"][i]),
             "cl_vlm": float(state["cl_vlm"][i]),
             "cl": float(section_aero["CL"][i]),
-            "cd": float(section_aero["CD"][i]),
+            "cd": float(section_aero["CD"][i] + induced_cd[i]),
+            "cd_2d": float(section_aero["CD"][i]),
+            "cd_induced": float(induced_cd[i]),
             "cm": float(section_aero["CM"][i]),
             "lift_error": float(state["error"][i]),
         }
@@ -274,9 +301,10 @@ def solve_vlm_neuralfoil(
         "geometry_id": geometry.geometry_id,
         "reynolds": reference_reynolds,
 
-        # Area-weight section coefficients to obtain wing lift and profile drag.
+        # Combine profile and corrected induced drag on the same reference area.
         "CL": float(np.sum(state["cl_vlm"] * strip_area) / airplane.s_ref),
-        "CD_profile": float(np.sum(section_aero["CD"] * strip_area) / airplane.s_ref),
+        "CD": profile_drag + induced_drag,
+        "drag_components": {"profile": profile_drag, "induced": induced_drag},
 
         # Include the corrected spanwise loading and panel circulation.
         "stations": stations,
@@ -288,7 +316,7 @@ def solve_vlm_neuralfoil(
         "solver_success": state["solver_success"],
         "solver_message": state["solver_message"],
 
-        # These baseline VLM coefficients precede coupling; CDi is not corrected.
+        # Keep the original inviscid solution for comparison only.
         "initial_vlm": {"CL": float(initial_aero["CL"]), "CDi": float(initial_aero["CD"])},
 
         # Report time spent on the initial VLM, coupling, and complete solve.
