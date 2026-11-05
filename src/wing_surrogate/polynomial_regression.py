@@ -4,11 +4,8 @@ from sklearn.linear_model import LinearRegression
 
 
 def build_model(degree=2):
-
-    model = Pipeline([
+    return Pipeline([
         ("polynomial_features", PolynomialFeatures(degree=degree, include_bias=False)),
         ("standard_scaler", StandardScaler()),
-        ("linear_regression", LinearRegression())
+        ("linear_regression", LinearRegression()),
     ])
-
-    return model

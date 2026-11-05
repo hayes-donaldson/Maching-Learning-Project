@@ -2,11 +2,8 @@ from torch import nn
 
 
 def build_model(input_size, output_size):
-
-    model = nn.Sequential(
+    return nn.Sequential(
         nn.Linear(input_size, 32), nn.ReLU(),
         nn.Linear(32, 16), nn.ReLU(),
-        nn.Linear(16, output_size)
+        nn.Linear(16, output_size),
     )
-
-    return model
