@@ -1,4 +1,4 @@
-"""Small-angle VLM–NeuralFoil lift matching for flat, symmetric-airfoil wings.
+"""Small-angle VLM–NeuralFoil lift matching for unswept, symmetric-airfoil wings.
 
 Uses a 2*pi-per-radian section lift slope to infer effective incidence.
 This is an approximate incidence-correction model, not a validated stall model.
@@ -132,7 +132,10 @@ def solve_vlm_neuralfoil(
     """Return approximate wing CL, profile CD, and station data.
 
     alpha is in degrees; velocity is in m/s. Station corrections are radians.
+    Reynolds number is calculated from velocity, local chord, and the
+    atmosphere's kinematic viscosity. The returned reference Re uses the MAC.
     Includes both halves of the wing, ordered from negative to positive y.
+    Geometric twist is included in the VLM mesh and its initial circulation.
     No coupled induced drag, total drag, or wing moment is reported here.
     """
 
@@ -207,9 +210,11 @@ def solve_vlm_neuralfoil(
         [xsec.chord for xsec in wing.xsecs],
     )
 
-    # Use local chord for Reynolds number and freestream speed for both Re and Mach.
+    # Calculate Reynolds number from the flow speed, chord, and atmospheric viscosity.
     atmosphere = analysis.op_point.atmosphere
-    Re = velocity * chord / float(atmosphere.kinematic_viscosity())
+    kinematic_viscosity = float(atmosphere.kinematic_viscosity())
+    Re = velocity * chord / kinematic_viscosity
+    reference_reynolds = velocity * float(airplane.c_ref) / kinematic_viscosity
     mach = velocity / float(atmosphere.speed_of_sound())
 
     # Save the baseline circulation before applying section lift corrections.
@@ -249,6 +254,7 @@ def solve_vlm_neuralfoil(
         {
             "y_m": float(y[i]),
             "chord_m": float(chord[i]),
+            "twist_deg": float(geometry.parameters.tip_twist_deg * 2 * abs(y[i]) / geometry.span_m),
             "area_m2": float(strip_area[i]),
             "Re": float(Re[i]),
             "mach": float(mach),
@@ -266,6 +272,7 @@ def solve_vlm_neuralfoil(
     # Assemble wing coefficients, spanwise loading, convergence details, and runtimes.
     return {
         "geometry_id": geometry.geometry_id,
+        "reynolds": reference_reynolds,
 
         # Area-weight section coefficients to obtain wing lift and profile drag.
         "CL": float(np.sum(state["cl_vlm"] * strip_area) / airplane.s_ref),

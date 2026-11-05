@@ -1,4 +1,4 @@
-"""Symmetric, untwisted trapezoidal wings. Lengths in m, angles in degrees."""
+"""Symmetric trapezoidal wings with linear twist. Lengths in m, angles in degrees."""
 
 from dataclasses import asdict, dataclass
 import hashlib
@@ -7,10 +7,12 @@ import math
 from typing import Any
 
 
-# Wing inputs: define the planform proportions, area, sweep, and airfoil.
+# Wing inputs: define the planform, airfoil, and root-to-tip twist.
 @dataclass(frozen=True)
 class WingParameters:
-    """Full-wing area; tip/root taper; quarter-chord sweep; named airfoil.
+    """Full-wing area; tip/root taper; named airfoil; tip twist relative to root.
+
+    Root twist is zero. Positive tip twist is wash-in; negative is washout.
 
     A custom airfoil must eventually use a versioned coordinate-content hash
     rather than an ambiguous name. Operating conditions are not geometry inputs.
@@ -21,6 +23,7 @@ class WingParameters:
     taper_ratio: float
     sweep_deg: float
     airfoil: str
+    tip_twist_deg: float = 0.0
 
     def __post_init__(self) -> None:
         # Require positive aspect ratio, wing area, and taper ratio.
@@ -43,13 +46,13 @@ class WingParameters:
 
         # Give identical wing designs the same identifier regardless of number formatting.
         values = asdict(self)
-        for key in ("aspect_ratio", "area_m2", "taper_ratio", "sweep_deg"):
+        for key in ("aspect_ratio", "area_m2", "taper_ratio", "sweep_deg", "tip_twist_deg"):
             value = float(values[key])
             values[key] = 0.0 if value == 0 else value
         values["airfoil"] = self.airfoil.strip().lower()
 
         # Create a repeatable identifier from the wing design inputs.
-        payload = json.dumps({"schema": 1, **values}, sort_keys=True, allow_nan=False)
+        payload = json.dumps({"schema": 2, **values}, sort_keys=True, allow_nan=False)
         return "wing_" + hashlib.sha256(payload.encode()).hexdigest()[:20]
 
 
@@ -113,7 +116,7 @@ def to_aerosandbox_wing(geometry: WingGeometry) -> Any:
             asb.WingXSec(
                 xyz_le=[geometry.tip_le_x_m, geometry.span_m / 2, 0.0],
                 chord=geometry.tip_chord_m,
-                twist=0.0,
+                twist=geometry.parameters.tip_twist_deg,
                 airfoil=airfoil,
             ),
         ],

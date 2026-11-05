@@ -11,7 +11,7 @@ requires-python = ">=3.10"
 dependencies = []
 
 [project.optional-dependencies]
-solver = ["aerosandbox==4.2.10", "neuralfoil==0.3.3", "numpy", "scipy", "PyYAML"]
+solver = ["aerosandbox==4.2.10", "neuralfoil==0.3.3", "numpy", "scipy", "PyYAML", "joblib>=1.4"]
 surrogate = ["numpy", "pandas", "scikit-learn", "torch", "joblib", "PyYAML"]
 dev = ["pytest>=7"]
 

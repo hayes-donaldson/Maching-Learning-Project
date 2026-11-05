@@ -5,7 +5,7 @@ design_space:
   aspect_ratio: [4.0, 12.0]
   area_m2: [0.2, 2.0]  # Full-wing planform area
   taper_ratio: [0.3, 1.0]
-  sweep_deg: [0.0, 30.0]  # Quarter-chord sweep
+  tip_twist_deg: [-3.0, 0.0]  # Linear twist from zero at the root; negative is washout
   airfoils: [naca0012, naca2412, naca4412]
 operating_conditions:
   alpha_deg: [-4.0, 12.0]

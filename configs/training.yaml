@@ -7,14 +7,11 @@ data:
     - aspect_ratio
     - area_m2
     - taper_ratio
-    - sweep_deg
+    - tip_twist_deg
     - airfoil
     - alpha_deg
-    - velocity_m_s
-    - density_kg_m3
-    - dynamic_viscosity_pa_s
-    - speed_of_sound_m_s
-  targets: [cl, cd]
+    - velocity
+  targets: [CL, CD_profile]
   group_column: geometry_id
   usable_status: converged
   processed_root: data/processed
